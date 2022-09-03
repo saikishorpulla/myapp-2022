@@ -1,16 +1,27 @@
-@Library("harilibs") _
-pipeline{
+pipeline { 
     agent any
-    stages{
-        stage("Maven Build"){
-            steps{
+    stages {
+        stage("Git checkout") {
+            steps {
+              git credentialsId: 'git-cred', url: "https://github.com/saikishorpulla/myapp-2022" 
+            }
+        }
+             stage("Maven Build") {
+            steps {
                 sh 'mvn clean package -DskipTests=true'
             }
         }
-        stage(" Dev Tomcat Deploy"){
-            steps{
-                tomcatDeploy("172.31.1.213","ec2-user","tomcat-dev")
+         stage("Dev Tomcat Deploy") {
+            steps {
+                sshagent(['git-mvn-tom']) {
+             // copy war
+             sh "scp -o StrictHostKeyChecking=no target/*.war ec2-user@172.31.1.234:/opt/tomcat9/webapps"
+             // stop tomcat
+             sh "ssh ec2-user@172.31.1.234 /opt/tomcat9/bin/shutdown.sh"
+             // start tomcat
+             sh "ssh ec2-user@172.31.1.234 /opt/tomcat9/bin/startup.sh"
+                }
+               }
             }
         }
     }
-}
